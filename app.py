@@ -21,6 +21,15 @@ def create_pkg_dict(data_path):
 # Load the default PKG-BOM data
 pkg_dict = create_pkg_dict(default_data_path)
 
+# Function for where used
+def find_pkgs_with_bom(bom_list, pkg_dict):
+    matching_pkgs = []
+    bom_set = set(bom_list)
+    for pkg_name, pkg_components in pkg_dict.items():
+        if bom_set <= pkg_components:  # Checks if all BOMs in bom_set are in pkg_components
+            matching_pkgs.append(pkg_name)
+    return matching_pkgs if matching_pkgs else ["No PKG found with the specified BOM item(s)."]
+
 # Function to find a matching PKG
 def find_matching_pkg(bom_list, pkg_dict):
     bom_set = set(bom_list)
@@ -34,7 +43,7 @@ def find_matching_pkg(bom_list, pkg_dict):
 st.title("PKG Matcher")
 
 # Radio button for the user to select input method
-input_method = st.radio("Select your input method:", ('Enter Manually', 'Upload File'))
+input_method = st.radio("Select your input method:", ('Enter Manually', 'Upload File', 'Item-Where Used'))
 
 if input_method == 'Enter Manually':
     # Text area for user to enter BOM components, separated by newlines
@@ -109,3 +118,22 @@ elif input_method == 'Upload File':
                 download_results(results_df[['SKU', 'Matching PKG']])
             else:
                 st.error("There was an error processing the file. Please check the file format.")
+
+
+elif input_method == 'Item-Where Used':
+    # Text area for user to enter BOM components, each item on a new line
+    bom_input = st.text_area("Enter BOM items, each item on a new line for 'Item-Where Used' search")
+    if bom_input:
+        # Convert input string to a list, splitting by newlines
+        bom_list = [x.strip() for x in bom_input.split('\n') if x.strip()]
+
+        # Use the new function to find PKGs where these BOMs are used
+        matching_pkgs = find_pkgs_with_bom(bom_list, pkg_dict)
+
+        # Display the result
+        st.write("The following PKG files use all the specified BOM items:")
+        matching_pkgs_df = pd.DataFrame(matching_pkgs, columns=['Matching PKG'])
+        st.write(matching_pkgs_df)
+
+        # Add download button for the results
+        download_results(matching_pkgs_df)
